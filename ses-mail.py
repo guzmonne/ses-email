@@ -1,6 +1,11 @@
 import os
 import sys
 import time
+import random
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+
 
 import boto3
 import lorem
@@ -59,8 +64,36 @@ def send_email():
 
     print(f'Message {response["MessageId"]} sent!')
 
+def send_email_with_attachment():
+    global CLIENT
+    message = MIMEMultipart()
+    message['Subject'] = '[ses-email] mail de prueba con adjunto'
+    message['From'] = 'no-reply@mail.conatest.click'
+    message['To'] = TO
+    # Message Body
+    part = MIMEText(lorem.text())
+    message.attach(part)
+    # Attachment
+    part = MIMEApplication(open('attachment.jpg', 'rb').read())
+    part.add_header('Content-Disposition', 'attachment',
+        filename='attachment.jpg')
+    message.attach(part)
+    # Send email
+    response = CLIENT.send_raw_email(
+        Source=message['From'],
+        Destinations=[TO],
+        RawMessage={
+            'Data': message.as_string()
+        }
+    )
+    print(f'Message {response["MessageId"]} sent!')
+
 def send_email_periodically(period):
-    send_email()
+    global ATTACHMENT_RATIO
+    if random.uniform(0, 1) < ATTACHMENT_RATIO: 
+        send_email_with_attachment()
+    else:
+        send_email()
     time.sleep(period)
     send_email_periodically(period)
 
